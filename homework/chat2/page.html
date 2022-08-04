@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="/socket.io/socket.io.js"></script>
+  </head>
+  <style>
+    body {
+      position: relative;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .content {
+      width: 500px;
+      height: 500px;
+      /* border: 2px solid black; */
+      border-radius: 20px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .join_box {
+      width: 150px;
+      height: 500px;
+      border: 1px solid black;
+      border-radius: 20px;
+      position: absolute;
+      top: 50%;
+      left: 10%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+    .head {
+      font-size: 30px;
+      color: white;
+      text-align: center;
+      text-justify: center;
+      background-color: rgb(113, 172, 26);
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      height: 50px;
+      box-sizing: border-box;
+    }
+    .middle {
+      position: relative;
+      width: 500px;
+      height: 350px;
+      background-color: rgb(245, 241, 197);
+    }
+    #main {
+      display: none;
+      position: absolute;
+      width: 490px;
+      height: 340px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    #login_display {
+      position: absolute;
+      width: 250px;
+      height: 160px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .choose {
+      float: right;
+      margin-top: 14px;
+      margin-right: 14px;
+      width: 70px;
+      height: 23px;
+    }
+    .bottom {
+      display: flex;
+      height: 100px;
+      justify-content: space-evenly;
+      border-radius: 0 0 20px 20px;
+      align-items: center;
+      background-color: bisque;
+    }
+    #login_id {
+      width: 243px;
+    }
+    #login_btn {
+      margin-top: 20px;
+      width: 250px;
+    }
+    #msg {
+      width: 350px;
+      border-radius: 10px;
+      height: 80%;
+      border: 0;
+    }
+    #send_btn {
+      width: 80px;
+      height: 80px;
+      border: 0;
+      border-radius: 10px;
+      box-sizing: border-box;
+      background-color: goldenrod;
+    }
+    .wrap {
+      width: 300px;
+      height: 200px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: cornflowerblue;
+      display: none;
+    }
+  </style>
+  <body>
+    <div class="content">
+      <div class="head">
+        버듸버듸
+        <select id="rooms">
+          <option value="0">1번방</option>
+          <option value="1">2번방</option>
+          <option value="2">3번방</option>
+        </select>
+      </div>
+      <div class="middle">
+        <div id="login_display">
+          <p>로그인</p>
+          <input type="text" id="login_id" placeholder="아이디 입력" />
+
+          <button id="login_btn">접속</button>
+        </div>
+        <div id="main">
+          <ul id="messages"></ul>
+        </div>
+      </div>
+      <div class="bottom">
+        <input id="msg" placeholder="메시지 입력" />
+        <button id="send_btn">보내기</button>
+      </div>
+    </div>
+    <div class="join_box">
+      <div>참가자</div>
+      <div>
+        <ul id="join_user"></ul>
+      </div>
+    </div>
+    <form method="post">
+      <div class="wrap">
+        <div class="top_sc">귓속말</div>
+        <div class="middle_sc"></div>
+        <div class="bottom_sc">
+          <input id="msg_sc" placeholder="메시지 입력" />
+          <button type="submit" id="send_btn_sc">보내기</button>
+        </div>
+      </div>
+    </form>
+  </body>
+  <script>
+    const socket = io.connect();
+    class userData {
+      constructor(roomData, nameData, idData) {
+        this.roomData = roomData;
+        this.nameData = nameData;
+        this.idData = idData;
+      }
+    }
+    let userList = new Array();
+    let make_joinUser = function (id) {
+      let li = document.createElement("li");
+      let btn = document.createElement("button");
+      btn.classList.add("scrMsg_btn");
+      btn.innerHTML = "귓속말";
+      li.classList.add("join_list");
+      li.innerHTML = `${id}`;
+      join_user.appendChild(li);
+      li.appendChild(btn);
+    };
+    let make_joinMsg = function (id, roomNum) {
+      let roomName = ["1번방", "2번방", "3번방"];
+      let li = document.createElement("li");
+      li.innerHTML = `${id}님이 ${roomName[roomNum]}에 입장하셨습니다.`;
+      messages.appendChild(li);
+    };
+    let make_msg = function (id, userMsg) {
+      let li = document.createElement("li");
+      li.classList.add("msg_chat");
+      li.innerHTML = `${id} : ${userMsg}`;
+      messages.appendChild(li);
+    };
+    window.onload = function () {
+      let room = rooms.options[rooms.selectedIndex].value;
+      let user_id;
+      login_btn.onclick = function () {
+        login_display.style.display = "none";
+        main.style.display = "block";
+        user_id = login_id.value;
+        // 로그인 이벤트[방정보, 아이디 정보 전달]
+        socket.emit("logIn", room, user_id);
+
+        socket.on("logIn", (room, user_id, socket_id) => {
+          console.log("로그인정보 넘어옴");
+          let UD = new userData(room, user_id, socket_id);
+          userList.push(userData);
+          console.log(userList[0]);
+          console.log(userList[1]);
+          console.log(userList[2]);
+          make_joinMsg(user_id, room);
+          //   userList.forEach(make_joinUser(userData.nameData));
+          send_btn.onclick = function () {
+            let user_msg = msg.value;
+            socket.emit("message", room, user_id, user_msg);
+            console.log("메시지 보내기");
+          };
+        });
+        // scrMsg_btn.onclick = function () {
+        //   console.log("귓속말");
+        // };
+
+        socket.on("message", (user_id, user_msg) => {
+          make_msg(user_id, user_msg);
+          msg.value = "";
+        });
+      };
+    };
+  </script>
+</html>

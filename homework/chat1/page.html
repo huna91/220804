@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script src="/socket.io/socket.io.js"></script>
+  </head>
+  <style>
+    body {
+      position: relative;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .content {
+      width: 500px;
+      height: 500px;
+      /* border: 2px solid black; */
+      border-radius: 20px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .join_box {
+      width: 150px;
+      height: 500px;
+      border: 1px solid black;
+      border-radius: 20px;
+      position: absolute;
+      top: 50%;
+      left: 10%;
+      transform: translate(-50%, -50%);
+      text-align: center;
+    }
+    .head {
+      font-size: 30px;
+      color: white;
+      text-align: center;
+      text-justify: center;
+      background-color: rgb(113, 172, 26);
+      border-radius: 20px 20px 0 0;
+      width: 100%;
+      height: 50px;
+      box-sizing: border-box;
+    }
+    .middle {
+      position: relative;
+      width: 500px;
+      height: 350px;
+      border-left: 1px rgb(202, 131, 24);
+      border-right: 1px blanchedalmond;
+      background-color: aqua;
+    }
+    #main {
+      display: none;
+      position: absolute;
+      width: 490px;
+      height: 340px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    #login_display {
+      position: absolute;
+      width: 490px;
+      height: 340px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    .choose {
+      float: right;
+      margin-top: 14px;
+      margin-right: 14px;
+      width: 70px;
+      height: 23px;
+    }
+    .bottom {
+      display: flex;
+      height: 100px;
+      justify-content: space-evenly;
+      border-radius: 0 0 20px 20px;
+      align-items: center;
+      background-color: bisque;
+    }
+    #login_id {
+      width: 243px;
+    }
+    #login_btn {
+      margin-top: 20px;
+      width: 250px;
+    }
+    #msg {
+      width: 350px;
+      border-radius: 10px;
+      height: 80%;
+      border: 0;
+    }
+    #send_btn {
+      width: 80px;
+      height: 80px;
+      border: 0;
+      border-radius: 10px;
+      box-sizing: border-box;
+      background-color: goldenrod;
+    }
+    .wrap {
+      width: 300px;
+      height: 200px;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background-color: cornflowerblue;
+      display: none;
+    }
+  </style>
+  <body>
+    <div class="content">
+      <div class="head">
+        버듸버듸
+        <select id="rooms">
+          <option value="1번방">1번방</option>
+          <option value="2번방">2번방</option>
+          <option value="3번방">3번방</option>
+        </select>
+      </div>
+      <div class="middle">
+        <div id="login_display">
+          <p>로그인</p>
+          <input type="text" id="login_id" placeholder="아이디 입력" />
+
+          <button id="login_btn">접속</button>
+        </div>
+        <div id="main">
+          <ul id="messages"></ul>
+        </div>
+      </div>
+      <div class="bottom">
+        <input id="msg" placeholder="메시지 입력" />
+        <button id="send_btn">보내기</button>
+      </div>
+    </div>
+    <div class="join_box">
+      <div>참가자</div>
+      <div>
+        <ul id="join_user"></ul>
+      </div>
+    </div>
+    <form method="post">
+      <div class="wrap">
+        <div class="top_sc">귓속말</div>
+        <div class="middle_sc"></div>
+        <div class="bottom_sc">
+          <input id="msg_sc" placeholder="메시지 입력" />
+          <button type="submit" id="send_btn_sc">보내기</button>
+        </div>
+      </div>
+    </form>
+  </body>
+  <script>
+    const socket = io.connect();
+    // let userInf = function (user_name, user_id) {
+    //   this.user_name = user_name;
+    //   this.user_id = user_id;
+    // };
+    // let userData = [];
+    let room1 = [],
+      room2 = [],
+      room3 = [];
+    let main_room = [room1, room2, room3];
+    window.onload = function () {
+      let username;
+      login_btn.onclick = function () {
+        login_display.style.display = "none";
+        main.style.display = "block";
+        username = login_id.value;
+
+        let room = rooms.options[rooms.selectedIndex].value;
+
+        socket.emit("joinRoom", room, username);
+        rooms.onchange = function (e) {
+          let el = e.target;
+          socket.emit("leaveRoom", room, username);
+          room = rooms.options[rooms.selectedIndex].value;
+          socket.emit("joinRoom", room, username);
+          let clear = document.querySelectorAll(".joinUser");
+
+          for (let i = 0; i < clear.length; i++) {
+            console.log("참가자 삭제22");
+            join_user.removeChild(clear[i]);
+            jRoom.pop();
+          }
+        };
+
+        let jRoom = main_room[rooms.selectedIndex];
+
+        socket.on("joinRoom", (room, username, id) => {
+          let _inform = [username, id];
+          jRoom.push(_inform);
+          // userData.push(userInf(username, id));
+          let li_msg = document.createElement("li");
+          li_msg.classList.add("join_text");
+          li_msg.innerHTML = `${username}님${room}에 입장`;
+          messages.appendChild(li_msg);
+          // messages.innerHTML += `
+          //   <li class="join_text">
+          //       ${username}님${room}에 입장
+          //   </li>
+          //   `;
+          // 참가자 탭 참가인원 추가
+          //
+
+          let _clear = document.querySelectorAll(".joinUser");
+          for (let i = 0; i < _clear.length; i++) {
+            console.log("참가자 삭제22");
+            join_user.removeChild(_clear[i]);
+          }
+          // for (let i = 0; i < _room.length; i++) {
+          // ------------------------li로 넣어주는거------------
+          // const li = document.createElement("li");
+          // li.classList.add("joinUser");
+          // li.setAttribute("data-name", `${username}`);
+          // li.innerHTML = `${username}`;
+          // const button = document.createElement("button");
+          // button.classList.add("scmsg_btn");
+          // button.innerHTML = "귓속말";
+          // li.appendChild(button);
+          // join_user.appendChild(li);
+          // -------------------------------------------------
+          // }
+          function make_joinUser(user) {
+            const _li = document.createElement("li");
+            _li.classList.add("joinUser");
+            _li.setAttribute("data-name", `${user}`);
+            _li.innerHTML = `${user}`;
+            const _button = document.createElement("button");
+            _button.classList.add("scmsg_btn");
+            _button.innerHTML = "귓속말";
+            _li.appendChild(_button);
+            join_user.appendChild(_li);
+          }
+          console.log(jRoom[0]);
+          console.log(jRoom[1]);
+          console.log(jRoom[2]);
+
+          for (let i = 0; i < jRoom.length; i++) {
+            if (jRoom.length == 0) {
+              return;
+            } else {
+              make_joinUser(jRoom[i][0]);
+            }
+          }
+
+          // button.onclick = () => {
+          //   document.querySelector(".wrap").style.display = "block";
+          //   let _msg = msg_sc.value;
+          //   socket.emit("secrit", username, _msg);
+          // };
+
+          // join_user.innerHTML += `
+          //       <li class="joinUser" data-name="${username}">
+          //         ${username}<button class="scmsg_btn">귓속말</button>
+          //       </li>
+          //       `;
+
+          let ear = document.querySelectorAll(".scmsg_btn");
+          let ear_active = document.querySelector(".wrap");
+          // console.log(ear);
+          ear.onclick = function () {
+            socket.emit("secrit", msg_sc, username, id);
+            ear_active.style.display = "block";
+          };
+        });
+        socket.on("leaveRoom", (room, username) => {
+          console.log(jRoom);
+          console.log(username);
+          jRoom.pop();
+          console.log(jRoom[0]);
+          console.log(jRoom[1]);
+          console.log(jRoom[2]);
+          console.log(jRoom.indexOf(username, 0));
+          let li_msg = document.createElement("li");
+          li_msg.classList.add("join_text");
+          li_msg.innerHTML = `${username}님${room}에서 퇴장`;
+          messages.appendChild(li_msg);
+          // messages.innerHTML += `
+          //       <li class="join_text">
+          //         ${username}님${room}에서 퇴장
+          //         </li>
+          //         `;
+          let _sub = document.querySelector(`li[data-name= "${username}" ]`);
+
+          join_user.removeChild(_sub);
+        });
+
+        socket.on("chat", (username, msg) => {
+          messages.innerHTML += `
+        <li>
+            ${username} : ${msg}
+        </li>
+        `;
+        });
+        let put = (send_btn.onclick = function () {
+          socket.emit("chat", room, username, msg.value);
+          msg.value = "";
+        });
+        socket.on("scrMsg", (data) => {
+          alert(data.msg);
+        });
+
+        document.onkeydown = (e) => {
+          if (e.keyCode == 13) {
+            put();
+          }
+        };
+      };
+    };
+  </script>
+</html>
